@@ -1,0 +1,41 @@
+0.
+* This gave the secret right away after running it.
+* No extra steps are required.
+Follow: ./0 => Secret will be printed!
+1.
+For this one, I had to:
+* run gdb unix utility to learn the behavior of program.
+* load the executable file by doing "file 1"
+* make a breakpoint at line 1 and run the program. Then do "disas" to see the instructions that are going to be executed. We set breakpoint at line 1 to start the instruction from the very beginning.
+* ni until the "=>" is right after the rand() call (i.e at line 37). At this point the random number is generated.
+* print eax by doing "p $eax". We print eax because the random value created by rand() is stored in eax register.
+* Store that number somewhere. Now ni until the "=>" is right after the scanf call (i.e at line 82).
+* Now enter the number stored in eax register which we saved/printed eariler.
+* perform ni till the last printf call (i.e. line 138) because this call prints the secret. (secret is generated after line 100 is executed)
+* The Secret is printed.
+** Notes - When we simply run the program, it prints that secret will only be revealed when correct random generated number is entered. After looking at the assembly instructions closely in gdb, I figured out comparision occurs at line 85. If the generated random number and the number we entered doesn't match, the program will skip the instructions till line 145. If this occurs, the program will print "you lose :(" and exit. Otherwise If the numbers matched, the program will continue executing the next instruction with generating the password/secret eventually at 0x0000000000400861 line 100 and printing the secret/password at intruction 0x0000000000400887 line 138.
+*** Follow: gdb -> file 1 -> b 1 -> r -> ni until * 0x400822 (line 37) -> p $eax -> prints the generated random number. -> ni until * 0x40084f (line 82) -> enter the generated random number -> ni until *0x400887 (line 138) -> secret is printed!
+2.
+For this one, I had to:
+* use ltrace unix utility.
+* perform ltrace --align 4 ./2 to see what each function is returning.
+* the curl_easy_perform is returning 0. So the call was successful and thus the answer is yes.
+3.
+For this one, I had to:
+* use strings and ltrace unix utility to get some kind of information for filename. "iamspecial" is the filname program is looking for as seen in  __xstate line. 
+* create a file named iamspecial. Save and close the file after entering anything.
+* Now run "chmod 700 iamspecial". This will give the program appropriate access rights to the file.
+* The secret is printed after running 3rd executable.
+** Notes - When we simply run the program, we get the message that file with special name was not found. This gives us hint that program is looking for a file with a specific name. I did strings 3. It printed several strings. The I also did ltrace ./3. After creating the iamspecial file, I ran the program. It passed filename check and printed  "correct file found." then it printed "checking for appropriate access right..", then it printed "check failed" and exited. I did readelf and objdump but didn't get much out of it. I realised the program needs RW access. So i rand chmod 700 on iamspecial file. run 4th exec. All checks passed.
+*** Follow: strings 3 -> vi iamspecial -> enter anything, save, close -> chmod 700 iamspecial -> ./3 -> secret will print! 
+4.
+For this one, I had to:
+* use several unix utilities such as readeld, ldd, objdump.
+* do readelf -a 4 to see the information and libraries the program needs. The libc.so.6 and lib361.so are dynamically linked libraries needed.
+* Now do ldd 4. This gives us the directory where the files are located. It locates the libc.so.6 right away but lib361.so says not found. nonetheless, ldd gave us the indication of which directories the program is looking for the libraries.
+* The .dynsym Symbol table shows that we need a function named secretoperation. After searching (grep) libc.so.6, secrectoperation() was not found anywhere. so i realised i need to create it in lib361.so.
+* create a lib361.c file. write the secretoperation() function in such a way that it returns 4 when it's called for the first time and then return 10 when it's called second time. save and close the file.
+* now compile and create the dynamic linked library named lib361.so from lib361.c ( use gcc -shared -o lib361.so -fPIC lib361.c )
+* copy the lib361.so file to the directory where libc.so.6 was found. you will need to use sudo cp. (i copied it to /lib/x86_64-linux-gnu/ )
+* now run the 4th executable. All the assert test will pass and secret will print.
+** Notes: When we run teh program it said shared library not found. So first of all we need to find what libraries are shared in the program. To do that I used the readelf utility. After some trial and errors, i found out that the programs calls the secretoperation function twice. first time it should return "4" and other time "10". To do that i created a global variable setting it to 0. if it's called the first time, the func secretoperation() would return 4 and set the global to 1. now make a condition inthe function that if global variable is 1 return 10. This way both assert passed and the secret is printed! The files i created are in the puzzles folder.
